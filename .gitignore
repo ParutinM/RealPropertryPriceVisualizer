@@ -108,6 +108,7 @@ env/
 venv/
 ENV/
 my_env/
+/enviroment/
 env.bak/
 venv.bak/
 
