@@ -1,0 +1,11 @@
+scrapper:
+
+  # Block with scrapper fields
+  SystemFields: ["id_cian"]
+  MetaPropertyFields: ["price"]
+  LocationFields: []
+  MetaAdFields: []
+#  MetaPropertyFields: ["price", "type", "n_rooms", "square_meters", "state", "repair_condition", "floor", "build_date"]
+#  LocationFields: ["city", "street", "x_coordinate", "y_coordinate", "subway_time"]
+#  MetaAdFields: ["first_publication_time", "last_update_time", "build_company"]
+
