@@ -1,5 +1,6 @@
 scrapper:
 
+  targetCity: "Москва"
   # Block with scrapper fields
   SystemFields: ["id_cian"]
   MetaPropertyFields: ["price"]
@@ -9,3 +10,5 @@ scrapper:
 #  LocationFields: ["city", "street", "x_coordinate", "y_coordinate", "subway_time"]
 #  MetaAdFields: ["first_publication_time", "last_update_time", "build_company"]
 
+  TotalPagesParse: 10
+  SleepWhileCaptcha: 0.2
