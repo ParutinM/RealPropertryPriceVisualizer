@@ -13,3 +13,7 @@ scrapper:
   TotalPagesParse: 10
   SleepWhileCaptcha: 0.2
   SleepUpdateWaiting: 3
+
+  # Threading
+  MaximumThreads: 6
+  ObserverOfMaximumThreadUsageTimeUpdate: 0.5

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import re
 import threading
 from pprint import pprint as beauty_print
@@ -60,6 +61,8 @@ class MainScrapper:
 
         self.unchecked_urls_deque = deque()
 
+        self._list_of_threads: List[Thread] = list()
+
     def _parse_content_object_page(self, html: dict):
         for field_scrapper in self.scrapperModules:
             field_scrapper.collect_field(html=html)
@@ -76,13 +79,16 @@ class MainScrapper:
         all_cards: List[bs4.Tag] = soup.find_all("article", attrs={'data-name': 'CardComponent'})
         # Construct deque of unchecked urls
         self.unchecked_urls_deque.extend([card.findChild("a", attrs={"href": _template_any})["href"]
-                                          for card in all_cards[:3]])
+                                          for card in all_cards[:10]])
 
     def _reduce_driver_with_url(self, _collected_url):
         _tmp_driver = webdriver.Chrome(ChromeDriverManager(version="107.0.5304.62").install())
         browser_request_checker_wait(_collected_url, _tmp_driver,
                                      time_sleep=self.configuration["scrapper"]["SleepWhileCaptcha"])
         soup = BeautifulSoup(_tmp_driver.page_source, 'html.parser')
+        print(len(_tmp_driver.page_source))
+        del _tmp_driver
+        return 'result'
         # print(soup.find("div", attrs={"data-name": "PriceLayout"}).findChild())
 
     def _check_objects_by_urls(self):
@@ -95,8 +101,17 @@ class MainScrapper:
                 _collected_url_pass = self.unchecked_urls_deque[0]
                 # _collected_url = "https://www.cian.ru/sale/flat/279127466/"
                 self.unchecked_urls_deque.popleft()
+
                 thread_creature = threading.Thread(target=self._reduce_driver_with_url, args=(_collected_url_pass, ))
+
+                while len(self._list_of_threads) >= self.configuration['scrapper']['MaximumThreads']:
+                    for _thread in self._list_of_threads:
+                        if not _thread.is_alive():
+                            self._list_of_threads.remove(_thread)
+                    time.sleep(self.configuration['scrapper']['ObserverOfMaximumThreadUsageTimeUpdate'])
+
                 thread_creature.start()
+                self._list_of_threads.append(thread_creature)
                 # thread_creature.join()
             else:
                 time.sleep(self.configuration["scrapper"]["SleepUpdateWaiting"])
