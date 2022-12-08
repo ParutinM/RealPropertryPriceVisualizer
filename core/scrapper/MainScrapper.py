@@ -92,7 +92,7 @@ class MainScrapper:
 
                 soup = BeautifulSoup(_tmp_driver.page_source, 'html.parser')
                 print(_tmp_driver.page_source)
-                print(soup.find_all("div", attrs={"data-name": "PriceLayout"}))
+                print(soup.find("div", attrs={"data-name": "PriceLayout"}).findChild())
 
             else:
                 await asyncio.sleep(0.5)
