@@ -1,8 +1,10 @@
 import asyncio
 import re
+import threading
 from pprint import pprint as beauty_print
 import time
 from collections import deque
+from threading import Thread
 
 import bs4
 
@@ -25,10 +27,10 @@ async def get_json(client, url):
         return await response.read()
 
 
-async def browser_request_checker_wait(url: str, driver: webdriver, time_sleep: float = 0.1):
+def browser_request_checker_wait(url: str, driver: webdriver, time_sleep: float = 0.1):
     driver.get(url)
     while driver.page_source.find("Мы проверяем ваш браузер") != -1:
-        await asyncio.sleep(time_sleep)
+        time.sleep(time_sleep)
 
 
 def map_scrapper(scrapper_name: str) -> AbstractParseField:
@@ -62,11 +64,11 @@ class MainScrapper:
         for field_scrapper in self.scrapperModules:
             field_scrapper.collect_field(html=html)
 
-    async def _collect_objects_urls_from_page(self):
+    def _collect_objects_urls_from_page(self):
         _template_any = re.compile(r".*")
         url = "https://www.cian.ru/cat.php?deal_type=sale&engine_version=2&offer_type=flat&p=1&region=4738"
-        await browser_request_checker_wait(url=url, driver=self.driver,
-                                           time_sleep=self.configuration["scrapper"]["SleepWhileCaptcha"])
+        browser_request_checker_wait(url=url, driver=self.driver,
+                                     time_sleep=self.configuration["scrapper"]["SleepWhileCaptcha"])
 
         response = self.driver.page_source
         # 28
@@ -76,35 +78,35 @@ class MainScrapper:
         self.unchecked_urls_deque.extend([card.findChild("a", attrs={"href": _template_any})["href"]
                                           for card in all_cards[:3]])
 
+    def _reduce_driver_with_url(self, _collected_url):
+        _tmp_driver = webdriver.Chrome(ChromeDriverManager(version="107.0.5304.62").install())
+        browser_request_checker_wait(_collected_url, _tmp_driver,
+                                     time_sleep=self.configuration["scrapper"]["SleepWhileCaptcha"])
+        soup = BeautifulSoup(_tmp_driver.page_source, 'html.parser')
+        # print(soup.find("div", attrs={"data-name": "PriceLayout"}).findChild())
 
-    async def _check_objects_by_urls(self):
+    def _check_objects_by_urls(self):
         """
         Должен вызываться в отдельном потоке
         :return:
         """
         while True:
             if len(self.unchecked_urls_deque) != 0:
-                _collected_url = self.unchecked_urls_deque[0]
+                _collected_url_pass = self.unchecked_urls_deque[0]
+                # _collected_url = "https://www.cian.ru/sale/flat/279127466/"
                 self.unchecked_urls_deque.popleft()
-                _tmp_driver = webdriver.Chrome(ChromeDriverManager(version="107.0.5304.62").install())
-                await browser_request_checker_wait(_collected_url, _tmp_driver,
-                                                   time_sleep=self.configuration["scrapper"]["SleepWhileCaptcha"])
-
-                soup = BeautifulSoup(_tmp_driver.page_source, 'html.parser')
-                print(_tmp_driver.page_source)
-                print(soup.find("div", attrs={"data-name": "PriceLayout"}).findChild())
-
+                thread_creature = threading.Thread(target=self._reduce_driver_with_url, args=(_collected_url_pass, ))
+                thread_creature.start()
+                # thread_creature.join()
             else:
-                await asyncio.sleep(0.5)
+                time.sleep(self.configuration["scrapper"]["SleepUpdateWaiting"])
 
 
-async def main_coro(*some_args, loop=None):
+def main():
     scrapper = MainScrapper()
-    await scrapper._collect_objects_urls_from_page()
-    await scrapper._check_objects_by_urls()
+    Thread(target=scrapper._collect_objects_urls_from_page).start()
+    scrapper._check_objects_by_urls()
 
 
 if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    coro = main_coro(loop=loop)
-    loop.run_until_complete(coro)
+    main()
